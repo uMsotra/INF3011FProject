@@ -1,0 +1,296 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    text-align: center;
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+}
+
+#pleasewait {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 800;
+    background-color: #deeff5;
+}
+
+#pleasewait table {
+    width: 100%;
+    height: 80%;
+}
+
+#pleasewait table td {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    color: #333;
+}
+
+#pleasewait img {
+    width: 70%;
+}
+
+#pleasewaitcontainer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100px;
+}
+
+#buttonenter {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100px;
+    z-index: 801;
+    display: none;
+}
+
+#buttonenter div {
+    border-radius: 5px;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    text-decoration: none;
+    margin: 20px;
+    color: #fff;
+    position: relative;
+    display: inline-block;
+    background-color: #55acee;
+    box-shadow: 0px 5px 0px 0px #3C93D5;
+    cursor: pointer;
+}
+
+#content {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    text-align: center;
+}
+
+#container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    overflow: hidden;
+    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+}
+
+#controls {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 15px;
+    z-index: 700;
+    color: #fff;
+}
+
+#controls_minus,
+#controls_plus {
+    float: left;
+    width: 32px;
+    height: 32px;
+    margin-left: 5px;
+    margin-right: 10px;
+    background-repeat: no-repeat;
+    background-size: cover;
+    cursor: pointer;
+}
+
+#controls_minus {
+    background-image: url("minus-icon.png");
+}
+
+#controls_plus {
+    background-image: url("plus-icon.png");
+}
+
+#info {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: 100%;
+    margin: 0 auto;
+    display: none;
+}
+
+#infotext {
+    margin: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 15px;
+    z-index: 701;
+    color: #fff;
+}
+
+#about {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 15px;
+    z-index: 702;
+    color: #fff;
+}
+
+.lds-spinner {
+    color: black;
+    display: inline-block;
+    position: relative;
+    width: 64px;
+    height: 64px;
+}
+
+.lds-spinner div {
+    transform-origin: 32px 32px;
+    animation: lds-spinner 1.2s linear infinite;
+}
+
+.lds-spinner div:after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 3px;
+    left: 29px;
+    width: 5px;
+    height: 14px;
+    border-radius: 20%;
+    background: #000000;
+}
+
+@keyframes lds-spinner {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+ /* Additional futuristic styling */
+ body {
+    font-family: 'Arial', sans-serif;
+    background-color: #000;
+    color: #fff;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+#pleasewait {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 800;
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    animation: loading 20s linear forwards; /* 10 seconds loading animation */
+}
+
+@keyframes loading {
+    0% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+#pleasewait img {
+    width: 300px; /* Adjust size as needed */
+    height: auto;
+}
+
+#pleasewait b {
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+#buttonenter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 801;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#buttonenter div {
+    border-radius: 30px;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    text-decoration: none;
+    color: #000;
+    background-color: #fff;
+    box-shadow: 0px 5px 15px rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#buttonenter div:hover {
+    transform: translateY(-3px);
+    box-shadow: 0px 8px 20px rgba(255, 255, 255, 0.3);
+}
+
+/* Additional futuristic styling for controls and info */
+#controls, #info {
+    font-size: 14px;
+    color: #ccc;
+    position: absolute;
+    z-index: 702;
+}
+
+#controls_minus, #controls_plus {
+    filter: invert(1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#controls_minus:hover, #controls_plus:hover {
+    transform: scale(1.1);
+}
+
+#info {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 20px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 15px;
+    display: none;
+}
+
+#about {
+    right: 20px;
+    top: 20px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 15px;
+}

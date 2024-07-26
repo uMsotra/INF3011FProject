@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: script.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: script.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Virtual Museum Prototype
+ * 
+ * This is a prototype for a virtual museum designed to demonstrate the potential of implementing a higher-level virtual museum in the South African context. It explores aspects of digital preservation of sports, arts, and culture, and incorporates concepts such as NFTs, augmented reality (AR), and virtual reality (VR).
+ * 
+ * **Authors:**
+ * - Sibonile Sithole
+ * - Michael Marufu
+ * - Matome Lethwane
+ * - Sphiwe Matone
+ * - Masande Nzimande
+ */
+
+// Scene and Rendering
+let mainContainer, MainScene, ScreenRenderer;
+
+// Introduction
+let introductionFile = "";
+let introductionText = "";
+
+// Lighting
+let ambientLight;
+
+// Camera
+let camera;
+let cameraPosition = null;
+
+// Mouse Interaction
+let ray, mouseCoordinates;
+let currentMouseX = 0;
+let initialMouseXOnMouseDown = 0;
+
+// Screen Dimensions
+let screenWidthHalf, screenHeightHalf;
+
+// Narration
+let narrationGuide;
+let narationVolume = 1;
+
+
+
+// Objects
+let InteractiveObjects, activeObjects, objectDetails;
+let focusedObject;
+let focusPosition = null;
+let focusRotation = 0;
+let initialRotationOnMouseDown = 0;
+let finalRotation = null;
+let objectVerticalOffset = 0;
+
+
+
+
+/**
+ * Event handler for decreasing the narration volume.
+ * Triggered when the "controls_minus" button is clicked.
+ * @param {Event} event - The click event object.
+ */
+document.getElementById("controls_minus").onclick = function(event) {
+    // Ensure the volume does not go below 0
+    if (narationVolume - 0.1 > 0) {
+        // Decrease the volume by 0.1
+        narationVolume = narationVolume - 0.1;
+        // Set the new volume to the narration guide
+        narrationGuide.volume = narationVolume;
+    }
+};
+
+/**
+ * Event handler for increasing the narration volume.
+ * Triggered when the "controls_plus" button is clicked.
+ * @param {Event} event - The click event object.
+ */
+document.getElementById("controls_plus").onclick = function(event) {
+    // Ensure the volume does not exceed 1
+    if (narationVolume + 0.1 &lt; 1.1) {
+        // Increase the volume by 0.1
+        narationVolume = narationVolume + 0.1;
+        // Set the new volume to the narration guide
+        narrationGuide.volume = narationVolume;
+    }
+};
+
+/**
+ * Event handler for hiding the info element.
+ * Triggered when the element with id "info" is clicked.
+ * @param {Event} event - The click event object.
+ */
+document.getElementById("info").onclick = function(event) {
+    document.getElementById("info").style.display = "none";
+};
+
+/**
+ * Updates camera and renderer settings when the window is resized.
+ * Adjusts camera aspect ratio and renderer size to match new window dimensions.
+ */
+function onWindowResize() {
+    // Update the aspect ratio of the camera
+    camera.aspect = window.innerWidth / window.innerHeight;
+    // Update the camera projection matrix with the new aspect ratio
+    camera.updateProjectionMatrix();
+    // Resize the renderer to match the new window dimensions
+    ScreenRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+/**
+ * Animation loop function.
+ * Handles camera rotation, movement, and narration playback.
+ * Continuously updates and renders the scene.
+ */
+function animator() {
+    // Request the next frame of the animation
+    requestAnimationFrame(animator);
+
+    // Rotate the camera when no object is focused
+    if (cameraPosition == null) {
+        /**
+         * Unwraps and calculates the difference in camera rotation.
+         * @type {Array&lt;number>} _iR - Unwrapped rotation values.
+         * @type {number} _dR - Difference in rotation.
+         */
+        var _iR = unwrapMeasurements([camera.rotation.y, focusRotation], Math.PI * 2);
+        var _dR = _iR[1] - _iR[0];
+
+        // If the difference is significant, update the camera rotation
+        if (Math.abs(_dR) > 0.002) {
+            _rY = camera.rotation.y + (_dR * 0.06);
+            camera.rotation.y = _rY;
+
+            // Normalize the camera rotation within 360 degrees
+            var angle = (camera.rotation.y * 180 / Math.PI).toFixed(0);
+            if (parseFloat(angle) > 360 || parseFloat(angle) &lt; -360) {
+                camera.rotation.y = 0;
+            }
+        }
+    }
+    // Move the camera towards the focused object
+    else if (cameraPosition != null) {
+        // Linearly interpolate (lerp) the camera position and rotation
+        cameraPosition.lerp(focusPosition, 0.04);
+        camera.position.copy(cameraPosition);
+        camera.rotation.y = lerp(camera.rotation.y, finalRotation, 0.04);
+
+        // Check if the camera has reached the target position and rotation
+        let cameraPosX = parseFloat(camera.position.x).toFixed(0);
+        let focusPosX = parseFloat(focusPosition.x).toFixed(0);
+        let cameraPosZ = parseFloat(camera.position.z).toFixed(0);
+        let focusPosZ = parseFloat(focusPosition.z).toFixed(0);
+        let cameraRotationY = parseFloat(camera.rotation.y).toFixed(2);
+        let targetRotationY = parseFloat(finalRotation).toFixed(2);
+
+        // Normalize the values to avoid negative zeros
+        if (cameraPosX == "-0") { cameraPosX = "0"; }
+        if (cameraRotationY == "-0.00") { cameraRotationY = "0.00"; }
+
+        // When the camera reaches the target position and rotation, start narration
+        if (cameraPosX == focusPosX &amp;&amp; cameraPosZ == focusPosZ &amp;&amp; cameraRotationY == targetRotationY) {
+            cameraPosition = null;
+            focusPosition = null;
+            focusRotation = camera.rotation.y;
+
+            // Play the narration audio when the camera is in position
+            if (narrationGuide != undefined) {
+                narrationGuide.pause();
+            }
+            narrationGuide = new Audio(activeObjects.userData[0]);
+            narrationGuide.onended = function() {
+                document.getElementById("info").style.display = "none";
+            };
+            narrationGuide.volume = narationVolume;
+            narrationGuide.play();
+
+            // Display the info text
+            document.getElementById("info").style.display = "block";
+            document.getElementById("infotext").innerHTML = activeObjects.userData[1];
+        }
+    }
+
+    // Render the scene with the updated camera position and rotation
+    ScreenRenderer.render(MainScene, camera);
+}
+
+/**
+ * Linearly interpolates between two values.
+ *
+ * @param {number} a - The start value.
+ * @param {number} b - The end value.
+ * @param {number} amount - The interpolation factor (clamped between 0 and 1).
+ * @returns {number} The interpolated value.
+ */
+function lerp(a, b, amount) {
+    amount = amount &lt; 0 ? 0 : amount;
+    amount = amount > 1 ? 1 : amount;
+    return a + (b - a) * amount;
+}
+
+/**
+ * Handles the mouse move event.
+ * Updates the focus rotation based on the mouse movement.
+ *
+ * @param {MouseEvent} event - The mouse move event.
+ */
+function mouseMov(event) {
+    if (document.getElementById("pleasewait").style.display == "none") {
+        currentMouseX = event.clientX - screenWidthHalf;
+        focusRotation = initialRotationOnMouseDown + (currentMouseX - initialMouseXOnMouseDown) * 0.0035;
+    }
+}
+
+/**
+ * Handles the mouse up event.
+ * Removes the mouse event listeners.
+ *
+ * @param {MouseEvent} event - The mouse up event.
+ */
+function mouseUp(event) {
+    if (document.getElementById("pleasewait").style.display == "none") {
+        document.removeEventListener("mousemove", mouseMov, false);
+        document.removeEventListener("mouseup", mouseUp, false);
+        document.removeEventListener("mouseout", mouseOut, false);
+    }
+}
+
+/**
+ * Handles the mouse out event.
+ * Removes the mouse event listeners.
+ *
+ * @param {MouseEvent} event - The mouse out event.
+ */
+function mouseOut(event) {
+    if (document.getElementById("pleasewait").style.display == "none") {
+        document.removeEventListener("mousemove", mouseMov, false);
+        document.removeEventListener("mouseup", mouseUp, false);
+        document.removeEventListener("mouseout", mouseOut, false);
+    }
+}
+
+/**
+ * Handles the touch start event.
+ * Initializes touch position and rotation values.
+ *
+ * @param {TouchEvent} event - The touch start event.
+ */
+function touchStart(event) {
+    if (document.getElementById("pleasewait").style.display == "none") {
+        if (event.touches.length == 1) {
+            event.preventDefault();
+            initialMouseXOnMouseDown = event.touches[0].pageX - screenWidthHalf;
+            initialRotationOnMouseDown = focusRotation;
+        }
+    }
+}
+
+/**
+ * Handles the touch move event.
+ * Updates the focus rotation based on touch movement.
+ *
+ * @param {TouchEvent} event - The touch move event.
+ */
+function touchMove(event) {
+    if (document.getElementById("pleasewait").style.display == "none") {
+        if (event.touches.length == 1) {
+            event.preventDefault();
+            currentMouseX = event.touches[0].pageX - screenWidthHalf;
+            focusRotation = initialRotationOnMouseDown + (currentMouseX - initialMouseXOnMouseDown) * 0.002;
+        }
+    }
+}
+
+/**
+ * Handles the mouse down event.
+ * Initializes mouse position and rotation values and adds mouse event listeners.
+ *
+ * @param {MouseEvent} event - The mouse down event.
+ */
+function mouseDown(event) {
+    if (document.getElementById("pleasewait").style.display == "none") {
+        event.preventDefault();
+        document.addEventListener("mousemove", mouseMov, false);
+        document.addEventListener("mouseup", mouseUp, false);
+        document.addEventListener("mouseout", mouseOut, false);
+        initialMouseXOnMouseDown = event.clientX - screenWidthHalf;
+        initialRotationOnMouseDown = focusRotation;
+
+        // is picture clicked check
+        if (cameraPosition == null) {
+            mouseCoordinates.x = (event.clientX / ScreenRenderer.domElement.clientWidth) * 2 - 1;
+            mouseCoordinates.y = -(event.clientY / ScreenRenderer.domElement.clientHeight) * 2 + 1;
+            ray.setFromCamera(mouseCoordinates, camera);
+            var intersects = ray.intersectObjects(InteractiveObjects);
+            if (intersects.length > 0) {
+                if (narrationGuide != undefined) {
+                    narrationGuide.pause();
+                }
+                document.getElementById("info").style.display = "none";
+
+                activeObjects = intersects[0].object;
+
+                var cameraDegrees = (camera.rotation.y * 180 / Math.PI).toFixed(2);
+                var objectDegrees = (activeObjects.rotation.y * 180 / Math.PI).toFixed(2);
+
+                if (parseFloat(cameraDegrees) &lt; parseFloat(-180)) {
+                    cameraDegrees = parseFloat(cameraDegrees) + parseFloat(180);
+                    cameraDegrees = (parseFloat(cameraDegrees) + parseFloat(180)) % 360; // Opposite angle
+                    camera.rotation.y = (cameraDegrees * Math.PI) / 180;
+                    cameraDegrees = (camera.rotation.y * 180 / Math.PI).toFixed(2);
+                }
+
+                if (parseFloat(cameraDegrees) > parseFloat(180) &amp;&amp; objectDegrees != 180) {
+                    cameraDegrees = parseFloat(cameraDegrees) - parseFloat(180);
+                    cameraDegrees = (parseFloat(cameraDegrees) - parseFloat(180)) % 360; // Opposite angle
+                    camera.rotation.y = (cameraDegrees * Math.PI) / 180;
+                    cameraDegrees = (camera.rotation.y * 180 / Math.PI).toFixed(2);
+                }
+
+                if (parseFloat(objectDegrees).toFixed(0) != parseFloat(-180)) {
+                    finalRotation = activeObjects.rotation.y;
+                } else {
+                    if (cameraDegrees &lt; 0) {
+                        finalRotation = (-180 * Math.PI) / 180;
+                    } else {
+                        finalRotation = (180 * Math.PI) / 180;
+                    }
+                }
+
+                if (activeObjects.rotation.y == 0) {
+                    cameraPosition = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z); // Holds current camera position
+                    focusPosition = new THREE.Vector3(activeObjects.position.x, camera.position.y, activeObjects.position.z + 50); // Target position
+                } else if (activeObjects.rotation.y == Math.PI / 2) {
+                    cameraPosition = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z); // Holds current camera position
+                    focusPosition = new THREE.Vector3(activeObjects.position.x + 50, camera.position.y, activeObjects.position.z); // Target position
+                } else if (activeObjects.rotation.y == -(Math.PI / 2)) {
+                    cameraPosition = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z); // Holds current camera position
+                    focusPosition = new THREE.Vector3(activeObjects.position.x - 50, camera.position.y, activeObjects.position.z); // Target position
+                } else if (activeObjects.rotation.y == Math.PI) {
+                    cameraPosition = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z); // Holds current camera position
+                    focusPosition = new THREE.Vector3(activeObjects.position.x, camera.position.y, activeObjects.position.z - 50); // Target position
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Computes the symmetric modulo of x with respect to m.
+ * Ensures the result is centered around zero.
+ *
+ * @param {number} x - The value to be wrapped.
+ * @param {number} m - The modulo base.
+ * @returns {number} The symmetric modulo result.
+ */
+function Symmetricmodulo(x, m) {
+    return x - ((Math.floor(x / m + 0.5)) * m);
+}
+
+/**
+ * Unwraps a series of angular measurements.
+ * Adjusts the series to remove discontinuities.
+ *
+ * @param {Array&lt;number>} x - The array of angular measurements.
+ * @param {number} m - The modulo base.
+ * @param {number} [initial=0] - The initial value for unwrapping.
+ * @returns {Array&lt;number>} The unwrapped array.
+ */
+function unwrapMeasurements(x, m, initial) {
+    let Yinitially = initial || 0;
+    var y = [];
+    for (var i = 0; i &lt; x.length; ++i) {
+        Yinitially += Symmetricmodulo(x[i] - Yinitially, m);
+        y[i] = Yinitially;
+    }
+    return y;
+}
+
+/**
+ * Sets up the scene, camera, and lighting.
+ * Creates and positions the floor, ceiling, and walls.
+ */
+function placeObjects() {
+    InteractiveObjects = [];
+    mainContainer = document.getElementById("container");
+    mainContainer.innerHTML = "";
+
+    screenWidthHalf = window.innerWidth / 2;
+    screenHeightHalf = window.innerHeight / 2;
+
+    camera = new THREE.PerspectiveCamera(37.8, window.innerWidth / window.innerHeight, 1, 100000);
+
+    ray = new THREE.Raycaster();
+    mouseCoordinates = new THREE.Vector2();
+
+    MainScene = new THREE.Scene();
+    MainScene.background = new THREE.Color(0x304040);
+
+    ambientLight = new THREE.HemisphereLight(0xE8E8E8, 0x000000, 1);
+    ambientLight.position.set(0, 0, 0);
+    MainScene.add(ambientLight);
+
+    group = new THREE.Group();
+    MainScene.add(group);
+
+    camera.position.set(0, 0, 195);
+    camera.lookAt(MainScene.position);    
+
+    // ADDING FLOOR
+    let floorImage = new THREE.ImageUtils.loadTexture("images/Floor.jpg");
+    floorImage.wrapS = floorImage.wrapT = THREE.RepeatWrapping; 
+    floorImage.repeat.set(15, 10);
+    let floorMaterial = new THREE.MeshBasicMaterial({map: floorImage, side: THREE.DoubleSide });
+    let floorShape = new THREE.PlaneGeometry(1000, 1000, 0, 0);
+    let floor = new THREE.Mesh(floorShape, floorMaterial);
+    floor.position.y = -40;
+    floor.rotation.x = Math.PI / 2;
+    MainScene.add(floor);
+
+    // ADDING ROOF
+    let roofImage = new THREE.ImageUtils.loadTexture("images/roof.jpg");
+    roofImage.wrapS = roofImage.wrapT = THREE.RepeatWrapping; 
+    roofImage.repeat.set(42, 42);
+    let roofMaterial = new THREE.MeshBasicMaterial({map: roofImage, side: THREE.DoubleSide });
+    let roofGeometry = new THREE.PlaneGeometry(1050, 1000, 0, 0);
+    let roof = new THREE.Mesh(roofGeometry, roofMaterial);
+    roof.position.y = 47;
+    roof.rotation.x = Math.PI / 2;
+    MainScene.add(roof);
+
+    // ADDING WALLS
+    let wallImage = new THREE.ImageUtils.loadTexture("images/Wall.jpg");
+    let wallMaterial = new THREE.MeshBasicMaterial({map: wallImage, side: THREE.DoubleSide });
+    let wallShapeSideA = new THREE.PlaneGeometry(600, 90, 0, 0);
+    let wallShapeSideB = new THREE.PlaneGeometry(600, 90, 0, 0);
+    let wallShapeSideC = new THREE.PlaneGeometry(600, 90, 0, 0);
+    let wallShapeSideD = new THREE.PlaneGeometry(600, 90, 0, 0);
+
+    let wallFront = new THREE.Mesh(wallShapeSideA, wallMaterial); 
+    let wallRight = new THREE.Mesh(wallShapeSideB, wallMaterial); 
+    let wallBack = new THREE.Mesh(wallShapeSideC, wallMaterial); 
+    let wallLeft = new THREE.Mesh(wallShapeSideD, wallMaterial); 
+
+    wallFront.position.y = 5;
+    wallFront.position.z = -230;
+    wallFront.position.x = -150;
+    wallFront.rotation.x = 0;
+
+    wallRight.position.y = 5;
+    wallRight.position.z = 0;
+    wallRight.position.x = -370;
+    wallRight.rotation.y = Math.PI / 2;
+
+    wallBack.position.y = 5;
+    wallBack.position.z = 270;
+    wallBack.position.x = -150;
+    wallBack.rotation.x = 0;
+
+    wallLeft.position.y = 5;
+    wallLeft.position.z = 0;
+    wallLeft.position.x = 50;
+    wallLeft.rotation.y = Math.PI / 2;
+
+    MainScene.add(wallFront);
+    MainScene.add(wallRight);
+    MainScene.add(wallBack);
+    MainScene.add(wallLeft);
+}
+
+/**
+ * Renders the 3D room scene using the Three.js library.
+ * Initializes the WebGL renderer and attaches it to the main container.
+ * Sets up event listeners for window resizing and user interactions.
+ */
+function renderRoom() {
+    // Initialize the WebGL renderer with anti-aliasing turned off
+    ScreenRenderer = new THREE.WebGLRenderer({ antialias: false });
+    // Set the size of the renderer to match the window dimensions
+    ScreenRenderer.setSize(window.innerWidth, window.innerHeight);
+    // Append the renderer's DOM element to the main container
+    mainContainer.appendChild(ScreenRenderer.domElement);
+    // Request the first animation frame and start the animation loop
+    requestAnimationFrame(animator);
+    // Add event listeners for window resize and user input
+    window.addEventListener("resize", onWindowResize, false);
+    document.addEventListener("mousedown", mouseDown, false);
+    document.addEventListener("touchstart", touchStart, false);
+    document.addEventListener("touchmove", touchMove, false);
+}
+
+/**
+ * Sets up the introduction for the welcome message.
+ * @param {string} audioFile - Path to the audio file for the introduction.
+ * @param {string} text - Text to be displayed during the introduction.
+ */
+function welcomeMessage(audioFile, text) {
+    introductionFile = audioFile;  // Path to the audio file for the introduction
+    introductionText = text;      // Text to be displayed during the introduction
+}
+
+/**
+ * Plays the welcome message audio and displays the corresponding text.
+ */
+function welcomeSpeak() {
+    // Retrieve the introduction file and text
+    let audioSource = introductionFile;
+    let displayText = introductionText;
+    
+    // Pause any currently playing narration
+    if (narrationGuide !== undefined) {
+        narrationGuide.pause();
+    }
+    
+    // Create a new audio object for the introduction file
+    narrationGuide = new Audio(audioSource);
+    // Define what happens when the audio ends
+    narrationGuide.onended = function() {
+        // Hide the info display when the audio ends
+        document.getElementById("info").style.display = "none";
+    };
+    
+    // Set the volume for the audio
+    narrationGuide.volume = narationVolume;
+    // Play the audio
+    narrationGuide.play();
+    // Show the info display and set its content
+    document.getElementById("info").style.display = "block";
+    document.getElementById("infotext").innerHTML = displayText;
+}
+
+/**
+ * Adds a 3D art image to the left wall of the room.
+ * @param {number} width - Width of the image.
+ * @param {number} zPosition - Z position of the image on the wall.
+ * @param {string} texturePath - Path to the texture image.
+ * @param {any} detail1 - Additional detail to store in the user data.
+ * @param {any} detail2 - Additional detail to store in the user data.
+ */
+function LeftWall(width, zPosition, texturePath, detail1, detail2) {
+    // Load the texture for the image
+    let image3DArtTexture = new THREE.ImageUtils.loadTexture(texturePath);
+    // Create a material with the loaded texture
+    let image3DArtMaterial = new THREE.MeshBasicMaterial({ map: image3DArtTexture });
+    // Create a plane geometry for the image with specified width
+    let image3DArtGeometry = new THREE.PlaneGeometry(width, 30, 0, 0);
+    // Create a mesh with the geometry and material
+    let image3DArt = new THREE.Mesh(image3DArtGeometry, image3DArtMaterial);
+    // Position the image on the left wall
+    image3DArt.position.set(-369, 0, zPosition);
+    image3DArt.rotation.y = Math.PI / 2;
+    // Store additional details in the user data of the mesh
+    image3DArt.userData = [detail1, detail2];
+    // Add the image to the main scene and interactive objects list
+    MainScene.add(image3DArt);
+    InteractiveObjects.push(image3DArt);
+}
+
+/**
+ * Adds a 3D art image to the front wall of the room.
+ * @param {number} width - Width of the image.
+ * @param {number} xPosition - X position of the image on the wall.
+ * @param {string} texturePath - Path to the texture image.
+ * @param {any} detail1 - Additional detail to store in the user data.
+ * @param {any} detail2 - Additional detail to store in the user data.
+ */
+function FrontWall(width, xPosition, texturePath, detail1, detail2) {
+    // Load the texture for the image
+    let image3DArtTexture = new THREE.ImageUtils.loadTexture(texturePath);
+    // Create a material with the loaded texture
+    let image3DArtMaterial = new THREE.MeshBasicMaterial({ map: image3DArtTexture });
+    // Create a plane geometry for the image with specified width
+    let image3DArtGeometry = new THREE.PlaneGeometry(width, 30, 0, 0);
+    // Create a mesh with the geometry and material
+    let image3DArt = new THREE.Mesh(image3DArtGeometry, image3DArtMaterial);
+    // Position the image on the front wall
+    image3DArt.position.set(xPosition, 0, -229);
+    image3DArt.rotation.y = 0;
+    // Store additional details in the user data of the mesh
+    image3DArt.userData = [detail1, detail2];
+    // Add the image to the main scene and interactive objects list
+    MainScene.add(image3DArt);
+    InteractiveObjects.push(image3DArt);
+}
+
+/**
+ * Adds a 3D art image to the right wall of the room.
+ * @param {number} width - Width of the image.
+ * @param {number} zPosition - Z position of the image on the wall.
+ * @param {string} texturePath - Path to the texture image.
+ * @param {any} detail1 - Additional detail to store in the user data.
+ * @param {any} detail2 - Additional detail to store in the user data.
+ */
+function RightWall(width, zPosition, texturePath, detail1, detail2) {
+    // Load the texture for the image
+    let image3DArtTexture = new THREE.ImageUtils.loadTexture(texturePath);
+    // Create a material with the loaded texture
+    let image3DArtMaterial = new THREE.MeshBasicMaterial({ map: image3DArtTexture });
+    // Create a plane geometry for the image with specified width
+    let image3DArtGeometry = new THREE.PlaneGeometry(width, 30, 0, 0);
+    // Create a mesh with the geometry and material
+    let image3DArt = new THREE.Mesh(image3DArtGeometry, image3DArtMaterial);
+    // Position the image on the right wall
+    image3DArt.position.set(49, 0, zPosition);
+    image3DArt.rotation.y = -(Math.PI / 2);
+    // Store additional details in the user data of the mesh
+    image3DArt.userData = [detail1, detail2];
+    // Add the image to the main scene and interactive objects list
+    MainScene.add(image3DArt);
+    InteractiveObjects.push(image3DArt);
+}
+
+/**
+ * Adds a 3D art image to the back wall of the room.
+ * @param {number} width - Width of the image.
+ * @param {number} xPosition - X position of the image on the wall.
+ * @param {string} texturePath - Path to the texture image.
+ * @param {any} detail1 - Additional detail to store in the user data.
+ * @param {any} detail2 - Additional detail to store in the user data.
+ */
+function BackWall(width, xPosition, texturePath, detail1, detail2) {
+    // Load the texture for the image
+    let image3DArtTexture = new THREE.ImageUtils.loadTexture(texturePath);
+    // Create a material with the loaded texture
+    let image3DArtMaterial = new THREE.MeshBasicMaterial({ map: image3DArtTexture });
+    // Create a plane geometry for the image with specified width
+    let image3DArtGeometry = new THREE.PlaneGeometry(width, 30, 0, 0);
+    // Create a mesh with the geometry and material
+    let image3DArt = new THREE.Mesh(image3DArtGeometry, image3DArtMaterial);
+    // Position the image on the back wall
+    image3DArt.position.set(xPosition, 0, 269);
+    image3DArt.rotation.y = Math.PI;
+    // Store additional details in the user data of the mesh
+    image3DArt.userData = [detail1, detail2];
+    // Add the image to the main scene and interactive objects list
+    MainScene.add(image3DArt);
+    InteractiveObjects.push(image3DArt);
+}
+
+/**
+ * Event handler for the "enter" button click.
+ * Hides the "please wait" message and "enter" button, then triggers the welcome message.
+ */
+document.getElementById("buttonenter").onclick = function() {
+    // Hide the "please wait" message and "enter" button
+    document.getElementById("pleasewait").style.display = "none";
+    document.getElementById("buttonenter").style.display = "none";
+    // Trigger the welcome message function
+    welcomeSpeak();
+};
+
+/**
+ * Event handler for the window load event.
+ * Displays the "enter" button and hides the "please wait" container.
+ */
+window.onload = function() {
+    // Display the "enter" button and hide the "please wait" container
+    document.getElementById("buttonenter").style.display = "block";
+    document.getElementById("pleasewaitcontainer").style.display = "none";
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#.onclick">.onclick</a></li><li><a href="global.html#BackWall">BackWall</a></li><li><a href="global.html#FrontWall">FrontWall</a></li><li><a href="global.html#LeftWall">LeftWall</a></li><li><a href="global.html#RightWall">RightWall</a></li><li><a href="global.html#Symmetricmodulo">Symmetricmodulo</a></li><li><a href="global.html#animator">animator</a></li><li><a href="global.html#lerp">lerp</a></li><li><a href="global.html#mouseDown">mouseDown</a></li><li><a href="global.html#mouseMov">mouseMov</a></li><li><a href="global.html#mouseOut">mouseOut</a></li><li><a href="global.html#mouseUp">mouseUp</a></li><li><a href="global.html#onWindowResize">onWindowResize</a></li><li><a href="global.html#placeObjects">placeObjects</a></li><li><a href="global.html#renderRoom">renderRoom</a></li><li><a href="global.html#touchMove">touchMove</a></li><li><a href="global.html#touchStart">touchStart</a></li><li><a href="global.html#unwrapMeasurements">unwrapMeasurements</a></li><li><a href="global.html#welcomeMessage">welcomeMessage</a></li><li><a href="global.html#welcomeSpeak">welcomeSpeak</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Fri Jul 26 2024 13:16:21 GMT+0200 (South Africa Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
